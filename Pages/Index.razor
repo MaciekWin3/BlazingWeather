@@ -1,0 +1,130 @@
+﻿@page "/"
+@using OfficeOpenXml
+@inject IHttpClientFactory clientFactory
+@inject IConfiguration configuration
+@inject IJSRuntime iJSRuntime
+
+<PageTitle>Index</PageTitle>
+
+@if(string.IsNullOrWhiteSpace(errorString) == false)
+{
+    <div class="h2">@errorString</div>
+}
+else if (forecast is null)
+{
+    <div class=oi-align-center>
+        <MatProgressCircle Indeterminate="true" Size="MatProgressCircleSize.Large" FourColored="true"/>
+    </div>
+}
+else
+{
+    <div class="container">
+        <div class="row">
+            <div class="col-sm-12 my-5">
+                <RadzenChart>
+                    <RadzenColumnSeries Data="@chartData" CategoryProperty="City" Title="Temperature" LineType="LineType.Dashed" ValueProperty="Temperature" />
+                    <RadzenColumnOptions Radius="5" />
+                    <RadzenValueAxis>
+                        <RadzenGridLines Visible="true" />
+                        <RadzenAxisTitle Text="Temperature" />
+                    </RadzenValueAxis>
+                </RadzenChart>
+            </div>
+        </div>
+    </div>
+    <MatTable Items="@weatherForecastList" class="mat-elevation-z5">
+        <MatTableHeader>
+            <th>City</th>
+            <th>Temperature</th>
+            <th>Pressure</th>
+            <th>Humidity</th>
+            <th>Wind Speed</th>
+            <th>Wind Degree</th>
+        </MatTableHeader>
+        <MatTableRow>
+            <td>@context.City</td>
+            <td>@Math.Round(context.Temperature)℃</td>
+            <td>@context.Pressure</td>
+            <td>@context.Humidity</td>
+            <td>@context.WindSpeed</td>
+            <td>@context.WindDegree</td>
+        </MatTableRow>
+    </MatTable>
+    <MatButton Raised="true"  OnClick="@GenerateExcel">Export to Excel</MatButton>
+}
+
+@code {
+
+    WeatherForecastResponse? forecast;
+    List<WeatherForecastResponse> weatherForecastResponseList = new List<WeatherForecastResponse>();
+    List<ExcelWeatherForecast> weatherForecastList = new List<ExcelWeatherForecast>();
+    List<ExcelWeatherForecast> chartData = new List<ExcelWeatherForecast>();
+    CountryResponse? countries;
+    string? errorString;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var countriesRequest = new HttpRequestMessage(HttpMethod.Get, "https://countriesnow.space/api/v0.1/countries/capital");
+        var countriesClient = clientFactory.CreateClient();
+
+        HttpResponseMessage countriesResponse = await countriesClient.SendAsync(countriesRequest);
+
+        if (countriesResponse.IsSuccessStatusCode)
+        {
+            countries = await countriesResponse.Content.ReadFromJsonAsync<CountryResponse>();
+            if (countries is not null && countries.Data is not null)
+            {
+                var countriesList = countries.Data.ToList().Take(5);
+                foreach (var country in countriesList)
+                {
+                    var weatherRequest = new HttpRequestMessage(HttpMethod.Get,
+                        $"http://api.openweathermap.org/data/2.5/weather?q={country.Capital}&appid={configuration["OpenWeatherMapKey"]}&units=metric");
+                    var weatherClient = clientFactory.CreateClient();
+                    HttpResponseMessage weatherResponse = await weatherClient.SendAsync(weatherRequest);
+                    if (weatherResponse.IsSuccessStatusCode)
+                    {
+                        forecast = await weatherResponse.Content.ReadFromJsonAsync<WeatherForecastResponse>();
+                        if (forecast is not null)
+                        {
+                            weatherForecastResponseList.Add(forecast);
+                        }
+                    }
+                }
+            }
+
+            weatherForecastList = weatherForecastResponseList.Select(f => new ExcelWeatherForecast()
+            {
+                City = f.Name,
+                Temperature = f.Main.Temperature,
+                Pressure = f.Main.Pressure,
+                Humidity = f.Main.Humidity,
+                WindSpeed = f.Wind.Speed,
+                WindDegree = f.Wind.Deg
+            }).ToList();
+
+            chartData = weatherForecastList.OrderBy(w => w.Temperature).Take(5).ToList();
+
+            errorString = null;
+        }
+        else
+        {
+            errorString = "Error! Try refresh the page!";
+        }
+    }
+
+    public void GenerateExcel()
+    {
+        ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
+        byte[] fileContents;
+
+        using var package = new ExcelPackage();
+        var ws = package.Workbook.Worksheets.Add("WeatherForecast");
+
+        var range = ws.Cells["A1"].LoadFromCollection(weatherForecastList, true);
+        range.AutoFitColumns();
+
+        fileContents = package.GetAsByteArray();
+
+        iJSRuntime.InvokeVoidAsync("saveAsFile", "WeatherForecast.xlsx", Convert.ToBase64String(fileContents));
+    }
+}
