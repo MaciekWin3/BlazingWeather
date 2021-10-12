@@ -13,7 +13,7 @@
 else if (forecast is null)
 {
     <div class="text-center">
-        <MatProgressCircle Indeterminate="true" Size="MatProgressCircleSize.Medium" FourColored="true"/>
+        <MatProgressCircle Indeterminate="true" Size="MatProgressCircleSize.Large" FourColored="true"/>
     </div>
 }
 else
@@ -78,7 +78,7 @@ else
             countries = await countriesResponse.Content.ReadFromJsonAsync<CountryResponse>();
             if (countries is not null && countries.Data is not null)
             {
-                var countriesList = countries.Data.ToList().Take(50);
+                var countriesList = countries.Data.ToList().Take(100);
                 foreach (var country in countriesList)
                 {
                     var weatherRequest = new HttpRequestMessage(HttpMethod.Get,
