@@ -78,7 +78,7 @@ else
             countries = await countriesResponse.Content.ReadFromJsonAsync<CountryResponse>();
             if (countries is not null && countries.Data is not null)
             {
-                var countriesList = countries.Data.ToList().Take(100);
+                var countriesList = countries.Data.OrderBy(c => c.Capital).ToList().Take(100);
                 foreach (var country in countriesList)
                 {
                     var weatherRequest = new HttpRequestMessage(HttpMethod.Get,
