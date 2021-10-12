@@ -1,5 +1,5 @@
 # BlazingWeather 🌤
-Simple weather application built with Blazor and .NET 6 that allows you to check weather and export that data to Excel
+Simple weather application built with Blazor and .NET 6 that allows you to check weather and export that data to Excel.
 
 ## Description 🔧
 The app displays weather statistics from capitals around the world using two external APIs:
