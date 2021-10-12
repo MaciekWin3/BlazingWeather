@@ -12,8 +12,8 @@
 }
 else if (forecast is null)
 {
-    <div class=oi-align-center>
-        <MatProgressCircle Indeterminate="true" Size="MatProgressCircleSize.Large" FourColored="true"/>
+    <div class="text-center">
+        <MatProgressCircle Indeterminate="true" Size="MatProgressCircleSize.Medium" FourColored="true"/>
     </div>
 }
 else
@@ -50,7 +50,11 @@ else
             <td>@context.WindDegree</td>
         </MatTableRow>
     </MatTable>
-    <MatButton Raised="true"  OnClick="@GenerateExcel">Export to Excel</MatButton>
+    <br />
+    <div class="text-center">
+        <MatButton Raised="true"  OnClick="@GenerateExcel">Export to Excel</MatButton>
+    </div>
+    <br />
 }
 
 @code {
@@ -74,7 +78,7 @@ else
             countries = await countriesResponse.Content.ReadFromJsonAsync<CountryResponse>();
             if (countries is not null && countries.Data is not null)
             {
-                var countriesList = countries.Data.ToList().Take(5);
+                var countriesList = countries.Data.ToList().Take(50);
                 foreach (var country in countriesList)
                 {
                     var weatherRequest = new HttpRequestMessage(HttpMethod.Get,
@@ -102,7 +106,7 @@ else
                 WindDegree = f.Wind.Deg
             }).ToList();
 
-            chartData = weatherForecastList.OrderBy(w => w.Temperature).Take(5).ToList();
+            chartData = weatherForecastList.OrderByDescending(w => w.Temperature).Take(5).ToList();
 
             errorString = null;
         }
